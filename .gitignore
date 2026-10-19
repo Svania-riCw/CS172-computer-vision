@@ -1,40 +1,32 @@
-# compilation and distribution
-__pycache__
-_ext
-*.pyc
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
 *.so
 build/
 dist/
 *.egg-info/
 
-# ipython/jupyter notebooks
-# *.ipynb
-**/.ipynb_checkpoints/
-
-# virtual environments
-.venv
-
-# Editor temporaries
+# Virtual environments and editor files
+.venv/
+.idea/
+.vscode/
 *.swn
 *.swo
 *.swp
 *~
+.DS_Store
 
-# MacOS
-*.DS_Store
+# Notebook checkpoints
+**/.ipynb_checkpoints/
 
-# IDE
-.idea
-.vscode
+# Generated experiment artifacts and datasets
+**/outputs/
+**/data/training/
+**/data/validation/
+**/data/*.zip
+**/data/*.json
 
-# Data
-/data/*
-!/data/test/
-
-# Training logs
-/outputs
-
-# Excluded from the student release
-/src/
-/data/test_alphabet/
-/[Rr][Ee][Aa][Dd][Mm][Ee].[Mm][Dd]
+# Keep the supplied HW test data tracked, but ignore future generated data.
+HW*/data/*
+!HW*/data/test/
+!HW*/data/test/**

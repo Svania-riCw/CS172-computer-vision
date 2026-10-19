@@ -1,0 +1,31 @@
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+build/
+dist/
+*.egg-info/
+
+# ipython/jupyter notebooks
+# *.ipynb
+**/.ipynb_checkpoints/
+
+# virtual environments
+.venv
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# MacOS
+*.DS_Store
+
+# IDE
+.idea
+.vscode
+
+# Generated data and training logs are ignored by the repository-level rules.
+# Keep source code and the homework README trackable.
