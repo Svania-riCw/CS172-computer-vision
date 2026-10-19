@@ -1,0 +1,40 @@
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+build/
+dist/
+*.egg-info/
+
+# ipython/jupyter notebooks
+# *.ipynb
+**/.ipynb_checkpoints/
+
+# virtual environments
+.venv
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# MacOS
+*.DS_Store
+
+# IDE
+.idea
+.vscode
+
+# Data
+/data/*
+!/data/test/
+
+# Training logs
+/outputs
+
+# Excluded from the student release
+/src/
+/data/test_alphabet/
+/[Rr][Ee][Aa][Dd][Mm][Ee].[Mm][Dd]
