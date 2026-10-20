@@ -32,6 +32,8 @@ def generate_captcha(
     noise_ratio=0.02,
     border_width=2,
     digit_color_range=(0, 160),
+    position_jitter=0,
+    free_positioning=False,
     seed=None,
 ):
     """Return one CAPTCHA image and its list of digit characters.
@@ -51,6 +53,19 @@ def generate_captcha(
     draw = ImageDraw.Draw(image)
     cell_width = (width - 2 * padding_x) // num_digits
 
+    free_x_positions = None
+    if free_positioning:
+        text_widths = [draw.textbbox((0, 0), digit, font=font)[2] for digit in label]
+        available_gap = max(0, width - 2 * padding_x - sum(text_widths))
+        gaps = [0] * (num_digits + 1)
+        for _ in range(available_gap):
+            gaps[rng.randrange(len(gaps))] += 1
+        free_x_positions = []
+        cursor = padding_x + gaps[0]
+        for index, text_width in enumerate(text_widths):
+            free_x_positions.append(cursor)
+            cursor += text_width + gaps[index + 1]
+
     for index, digit in enumerate(label):
         left, top, right, bottom = draw.textbbox((0, 0), digit, font=font)
         text_width = right - left
@@ -58,7 +73,13 @@ def generate_captcha(
         available_x = max(0, cell_width - text_width)
         available_y = max(0, height - 2 * padding_y - text_height)
 
-        x = padding_x + index * cell_width + rng.randint(0, available_x)
+        if free_x_positions is not None:
+            x = free_x_positions[index]
+        else:
+            jitter = rng.randint(-position_jitter, position_jitter)
+            x = padding_x + index * cell_width + rng.randint(0, available_x) + jitter
+            x = max(padding_x + index * cell_width, x)
+            x = min(padding_x + (index + 1) * cell_width - text_width, x)
         y = padding_y + rng.randint(0, available_y)
         color = tuple(rng.randint(digit_color_range[0], digit_color_range[1]) for _ in range(3))
 
@@ -76,7 +97,14 @@ def generate_captcha(
 
         max_x = max(0, cell_width - rotated.width)
         max_y = max(0, height - 2 * padding_y - rotated.height)
-        paste_x = padding_x + index * cell_width + rng.randint(0, max_x)
+        if free_x_positions is not None:
+            # Keep the rotated digit aligned with the same free horizontal
+            # slot used for the unrotated branch, while allowing for the
+            # extra width introduced by ``expand=True``.
+            paste_x = free_x_positions[index] + rng.randint(-rotated.width // 8, rotated.width // 8)
+            paste_x = max(padding_x, min(width - rotated.width - padding_x, paste_x))
+        else:
+            paste_x = padding_x + index * cell_width + rng.randint(0, max_x)
         paste_y = padding_y + rng.randint(0, max_y)
         image.paste(rotated, (paste_x, paste_y), rotated)
 

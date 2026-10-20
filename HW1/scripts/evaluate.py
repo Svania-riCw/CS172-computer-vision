@@ -119,8 +119,18 @@ def format_evaluation_metrics(name: str, metrics: dict[str, float]) -> str:
 def main() -> None:
     args = parse_args()
     checkpoint_path = args.checkpoint.expanduser().resolve()
-    config_path = (args.config or infer_config_path(checkpoint_path)).expanduser().resolve()
-    config = load_config(config_path)
+    config_path = None
+    if args.config is not None:
+        config_path = args.config.expanduser().resolve()
+        config = load_config(config_path)
+    else:
+        try:
+            config_path = infer_config_path(checkpoint_path)
+            config = load_config(config_path)
+        except FileNotFoundError:
+            if args.model is None or args.image_size is None:
+                raise
+            config = {}
 
     model_name = args.model or config.get("model")
     image_size_value = args.image_size or config.get("image_size")
@@ -140,13 +150,15 @@ def main() -> None:
     # weights when the recorded run used a pretrained starting point.
     construction_name = model_name.replace("_pretrained", "")
     model = create_model(construction_name, image_size=image_size).to(device)
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    if not isinstance(checkpoint, dict) or "model" not in checkpoint:
-        raise ValueError("checkpoint must be produced by scripts/train.py and contain a 'model' state dictionary")
-    model.load_state_dict(checkpoint["model"])
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    if not isinstance(checkpoint, dict):
+        raise ValueError("checkpoint must be a state dictionary or contain a 'model' state dictionary")
+    state_dict = checkpoint.get("model", checkpoint)
+    model.load_state_dict(state_dict)
 
     print(f"checkpoint: {checkpoint_path}")
-    print(f"config: {config_path}")
+    if config_path is not None:
+        print(f"config: {config_path}")
     print(f"model: {model_name}; image size: {image_size}; device: {device}")
 
     results = {}

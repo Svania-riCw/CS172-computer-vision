@@ -148,10 +148,49 @@ class SpatialSequenceNet(nn.Module):
         return F.cross_entropy(logits, targets), None
 
 
+class AttentionSequenceNet(nn.Module):
+    """Use learned position queries to locate five digits in a feature sequence."""
+
+    def __init__(self, num_digits=5, num_classes=10, **kwargs):
+        super().__init__()
+        del kwargs
+        self.num_digits = num_digits
+        self.num_classes = num_classes
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, 5, stride=(2, 1), padding=2, bias=False),
+            nn.BatchNorm2d(64),
+            nn.GELU(),
+            nn.Conv2d(64, 128, 3, stride=(2, 1), padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.GELU(),
+            nn.Conv2d(128, 192, 3, stride=(2, 1), padding=1, bias=False),
+            nn.BatchNorm2d(192),
+            nn.GELU(),
+        )
+        self.position = nn.Parameter(torch.zeros(1, 260, 192))
+        self.queries = nn.Parameter(torch.randn(1, num_digits, 192) * 0.02)
+        self.attention = nn.MultiheadAttention(192, 8, batch_first=True)
+        self.norm = nn.LayerNorm(192)
+        self.head = nn.Sequential(nn.Linear(192, 128), nn.GELU(), nn.Dropout(0.1), nn.Linear(128, num_classes))
+
+    def forward(self, images):
+        features = self.features(images).mean(dim=2).transpose(1, 2)
+        features = features + self.position[:, : features.shape[1]]
+        queries = self.queries.expand(images.shape[0], -1, -1)
+        attended, _ = self.attention(queries, features, features, need_weights=False)
+        logits = self.head(self.norm(attended))
+        return logits.transpose(1, 2)
+
+    @staticmethod
+    def compute_loss(logits, targets):
+        return F.cross_entropy(logits, targets), None
+
+
 MODELS = {
     "resnet18": TorchvisionResNet,
     "captcha_resnet18": CAPTCHAResNet,
     "spatial_sequence": SpatialSequenceNet,
+    "attention_sequence": AttentionSequenceNet,
 }
 
 

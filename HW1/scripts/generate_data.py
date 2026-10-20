@@ -66,6 +66,17 @@ def parse_args() -> argparse.Namespace:
         default=(0, 160),
         help="Inclusive RGB channel range for digit colors (default: 0 160)",
     )
+    parser.add_argument(
+        "--position-jitter",
+        type=int,
+        default=0,
+        help="Maximum horizontal jitter within each digit cell (default: 0)",
+    )
+    parser.add_argument(
+        "--free-positioning",
+        action="store_true",
+        help="place ordered digits with random gaps across the whole width",
+    )
     parser.add_argument("--seed", type=int, default=0, help="Base seed for reproducible output")
     args = parser.parse_args()
     validate_args(parser, args)
@@ -95,6 +106,8 @@ def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         or args.digit_color_range[0] > args.digit_color_range[1]
     ):
         parser.error("--digit-color-range must be between 0 and 255 in ascending order")
+    if args.position_jitter < 0:
+        parser.error("--position-jitter cannot be negative")
     if args.zip and args.output_dir.suffix.lower() != ".zip":
         parser.error("ZIP output path must end with .zip")
 
@@ -111,6 +124,8 @@ def generate_images(args: argparse.Namespace) -> Iterator[tuple[Image.Image, str
             noise_ratio=args.noise_ratio,
             border_width=args.border_width,
             digit_color_range=tuple(args.digit_color_range),
+            position_jitter=args.position_jitter,
+            free_positioning=args.free_positioning,
             seed=args.seed + index,
         )
         yield image, "".join(characters)
