@@ -103,7 +103,56 @@ class CAPTCHAResNet(nn.Module):
         return F.cross_entropy(logits, targets), None
 
 
-MODELS = {"resnet18": TorchvisionResNet, "captcha_resnet18": CAPTCHAResNet}
+class SpatialSequenceNet(nn.Module):
+    """A width-preserving CNN with one classifier for each ordered position."""
+
+    def __init__(self, num_digits=5, num_classes=10, **kwargs):
+        super().__init__()
+        del kwargs
+        self.num_digits = num_digits
+        self.num_classes = num_classes
+        self.features = nn.Sequential(
+            self._block(3, 32, stride=(2, 1)),
+            self._block(32, 64, stride=(2, 1)),
+            self._block(64, 128, stride=(2, 1)),
+            self._block(128, 192, stride=(2, 1)),
+        )
+        self.pool = nn.AdaptiveAvgPool2d((1, num_digits))
+        self.head = nn.Sequential(
+            nn.LayerNorm(192),
+            nn.Linear(192, 128),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(128, num_classes),
+        )
+
+    @staticmethod
+    def _block(in_channels, out_channels, stride):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, stride=stride, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.GELU(),
+            nn.Conv2d(out_channels, out_channels, 3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.GELU(),
+        )
+
+    def forward(self, images):
+        features = self.features(images)
+        pooled = self.pool(features).squeeze(2).transpose(1, 2)
+        logits = self.head(pooled)
+        return logits.transpose(1, 2)
+
+    @staticmethod
+    def compute_loss(logits, targets):
+        return F.cross_entropy(logits, targets), None
+
+
+MODELS = {
+    "resnet18": TorchvisionResNet,
+    "captcha_resnet18": CAPTCHAResNet,
+    "spatial_sequence": SpatialSequenceNet,
+}
 
 
 def create_model(name: str = "resnet18", **kwargs) -> nn.Module:
