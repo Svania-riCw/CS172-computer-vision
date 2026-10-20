@@ -58,6 +58,14 @@ def parse_args() -> argparse.Namespace:
         help="Fraction of pixels replaced by noise (default: 0.02)",
     )
     parser.add_argument("--border-width", type=int, default=2, help="Border width (default: 2)")
+    parser.add_argument(
+        "--digit-color-range",
+        type=int,
+        nargs=2,
+        metavar=("MIN", "MAX"),
+        default=(0, 160),
+        help="Inclusive RGB channel range for digit colors (default: 0 160)",
+    )
     parser.add_argument("--seed", type=int, default=0, help="Base seed for reproducible output")
     args = parser.parse_args()
     validate_args(parser, args)
@@ -81,6 +89,12 @@ def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         parser.error("--noise-ratio must be between 0 and 1")
     if args.border_width < 0:
         parser.error("--border-width cannot be negative")
+    if (
+        args.digit_color_range[0] < 0
+        or args.digit_color_range[1] > 255
+        or args.digit_color_range[0] > args.digit_color_range[1]
+    ):
+        parser.error("--digit-color-range must be between 0 and 255 in ascending order")
     if args.zip and args.output_dir.suffix.lower() != ".zip":
         parser.error("ZIP output path must end with .zip")
 
@@ -96,6 +110,7 @@ def generate_images(args: argparse.Namespace) -> Iterator[tuple[Image.Image, str
             max_noisy_lines=args.max_noisy_lines,
             noise_ratio=args.noise_ratio,
             border_width=args.border_width,
+            digit_color_range=tuple(args.digit_color_range),
             seed=args.seed + index,
         )
         yield image, "".join(characters)
